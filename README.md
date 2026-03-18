@@ -1,281 +1,216 @@
-# 🎵 GestureHand
+# Cadence
 
-**Hybrid glove + camera music interface** using flex sensors, IMU orientation, and hand tracking to generate expressive MIDI.
+![Cadence wearable instrument](assets/header.jpeg)
 
-## Quick Start
+Cadence is a wearable musical interface built during MakeMIT 2026. The system combines an ESP32-based sensing glove, webcam hand tracking, and a Python real-time control pipeline to turn hand motion into notes, chords, and expressive control signals.
 
-```bash
-# First time only
-conda create -n gesture-hand python=3.11
-conda activate gesture-hand
-pip install -r requirements.txt
+This repository is organized to be reviewable by hardware engineering and software engineering recruiters. It shows embedded sensor integration, signal conditioning, serial protocol design, real-time Python systems work, and a lightweight local/cloud data pipeline.
 
-# Then any time
-./run.sh
-```
+## Demo And Build Media
 
-That's it. The system:
-- ✅ Connects to glove via Bluetooth
-- ✅ Tracks hand position with camera
-- ✅ Generates MIDI notes and control changes
-- ✅ Saves all sessions locally
-- ✅ Shows dashboard at http://localhost:8888
+- [Demo video with audio](assets/demo.mp4)
+- [Build-process clip](assets/build-process.mov)
+- [Additional build photo](assets/build-photo.jpeg)
 
-## What It Does
+## Project Summary
 
-**Sensor Fusion:**
-- **Glove**: Flex sensors (finger curling), IMU (hand orientation), FSR (pressure)
-- **Camera**: MediaPipe hand landmarks (30fps tracking)
-- **Output**: MIDI note velocity + CC modulation → DAW/synthesizer
+The glove reads:
 
-**Real-time Processing:**
-- Madgwick orientation filter for stable hand rotation
-- Chord detection using Markov chains
-- Event timestamping with fingerprints
-- Automatic session logging
+- Four flex sensors for finger bend
+- A thumb pressure sensor
+- Three hall-effect sensors for binary magnetic triggers
+- An MPU-6050 IMU for motion and orientation
+
+Those signals are streamed from an ESP32 to a host machine, where a Python application:
+
+- Parses glove telemetry over serial/Bluetooth
+- Tracks the hand with MediaPipe
+- Fuses glove and camera signals to reduce false triggers
+- Generates notes, chords, and MIDI control changes
+- Logs performance sessions for replay and analysis
+- Optionally streams session data into a Vultr-backed backend
+
+## Why It Matters
+
+Most gesture instruments fail for predictable reasons: noisy sensors, unreliable trigger logic, or fragile demo-only software. This project was built around those constraints. The design emphasizes calibration, filtering, hysteresis, fallback paths, and simple observability so the system remains usable under hackathon conditions.
 
 ## Architecture
 
+```text
+ESP32 Glove
+  |- flex sensors
+  |- thumb pressure sensor
+  |- 3x hall-effect sensors
+  |- MPU-6050 IMU
+  `- serial / Bluetooth telemetry
+
+Python Runtime
+  |- FlexReader parses glove packets
+  |- MediaPipe estimates hand landmarks from webcam
+  |- sensor fusion combines glove bend + camera bend
+  |- chord engine selects harmonic voicings
+  |- MIDI / audio output layer renders performance
+  `- LocalSessionLogger records sessions as JSON
+
+Optional Cloud Path
+  |- Vultr-hosted API
+  |- Vultr managed PostgreSQL
+  `- hosted session dashboard / ingestion service
 ```
-hand_tracking.py (main engine)
-├── MediaPipe (hand tracking)
-├── FlexReader (glove Bluetooth)
-├── MadgwickAHRS (IMU fusion)
-├── chord_library.py (note voicing)
-└── local_session_logger.py (JSON storage)
-        │
-        └─→ sessions/{timestamp}.json
-                │
-                └─→ session_dashboard.py (web viewer)
-```
 
-## Commands
+## Engineering Highlights
 
-| Command | What It Does |
-|---------|-------------|
-| `./run.sh` | Local mode (safe default) |
-| `./run.sh --vultr` | Cloud mode (requires Vultr backend) |
-| `./run.sh --help` | Show all options |
-| `./run.sh --port 9000` | Custom dashboard port |
-| `./run.sh --no-dashboard` | Skip dashboard (just glove) |
+### Embedded / hardware
 
-## System Requirements
+- Integrated analog flex sensing, pressure sensing, digital hall sensing, and I2C IMU data on ESP32
+- Built a compact serial packet format for mixed sensor telemetry
+- Normalized raw sensor values into software-friendly representations
+- Iterated on pin mapping and sensor wiring under tight build-time constraints
 
-| Component | Requirement |
-|-----------|------------|
-| **OS** | macOS (Intel/Apple Silicon) or Linux |
-| **Python** | 3.10+ (conda environment) |
-| **Glove** | ESP32 with Arduino sketches (bluetooth) |
-| **Camera** | Webcam (USB or integrated) |
-| **Audio** | DAW with MIDI input (optional) |
+### Real-time software
 
-## File Structure
+- Implemented a threaded serial reader for continuous glove ingestion
+- Used weighted sensor fusion between flex readings and MediaPipe hand landmarks
+- Added smoothing, hysteresis, and velocity-based triggering to reduce note chatter
+- Added a Madgwick-based orientation filter for stable IMU-derived control
+- Logged structured session data for later playback and visualization
 
-```
+### Systems / product thinking
+
+- Built local-first execution so the instrument still works offline
+- Added a cloud ingestion path for remote persistence and session review
+- Kept the repo modular enough to separate firmware, runtime, and dashboard concerns
+
+## Repository Layout
+
+```text
 .
-├── run.sh                      ← Start here
-├── README.md                   ← You are here
-├── ARCHITECTURE.md             ← Deep dive (technical)
-│
-├── hand_tracking.py            ← Main performance engine
-├── chord_library.py            ← Chord voicings
-├── markov.py                   ← Chord progressions
-├── local_session_logger.py     ← Session storage
-├── session_dashboard.py        ← Web viewer
-│
-├── templates/
-│   ├── index.html              ← Session list UI
-│   └── session.html            ← Session detail UI
-│
-├── sessions/                   ← Auto-created (session files)
-│   └── 20260222_HHMMSS.json   ← Performance data
-│
-├── requirements.txt            ← Python dependencies
-├── .env                        ← Secrets (Vultr creds, not committed)
-│
-└── esp32/                      ← Arduino code for glove
-    ├── mpu6050_bt.ino
-    └── hackcode.ino
+|- hand_tracking.py           # Main runtime: glove ingest, camera fusion, note generation
+|- chord_library.py           # Reusable chord sequence library
+|- markov.py                  # Chord progression logic
+|- local_session_logger.py    # Session logging and snapshot writing
+|- session_dashboard.py       # Local session review dashboard
+|- live_dashboard.py          # Live telemetry dashboard
+|- run.sh                     # Main launcher for local or Vultr-backed runs
+|- esp32/
+|  |- hackcode2.ino           # Current ESP32 glove firmware
+|  `- mpu6050_bt.ino          # Earlier IMU/Bluetooth prototype
+|- templates/                # Local dashboard templates
+|- vultr_backend.py          # Hosted ingestion backend
+|- vultr_schema.sql          # Database schema
+`- sessions/                 # Saved local session logs
 ```
 
-## Dashboard
+## How It Works
 
-After `./run.sh`, the dashboard appears at **http://localhost:8888**:
+### 1. Glove firmware
 
-- **Sessions List**: All recorded performances
-- **Session Detail**: Event timeline, stats, performer info
-- **Real-time**: New sessions appear automatically
+The ESP32 firmware samples the glove sensors and transmits a compact line-oriented packet. This includes flex voltages, thumb sensor value, hall sensor states, and IMU measurements.
 
-Click any session to see:
-- All events (note on/off, CC changes, hand detection)
-- Timeline visualization
-- Performance metadata
+### 2. Sensor fusion runtime
 
-## Performance Capture
+`hand_tracking.py` runs the performance engine. It reads glove data in one thread while processing camera frames in the main loop. Finger bend is estimated from both sources, then fused to create more stable note triggers than either modality alone.
 
-When you start a session:
+### 3. Music generation
 
-1. Glove connects via Bluetooth (ESP32 auto-pairs)
-2. Camera window opens (wave hand to calibrate)
-3. Press space to enable chord recognition
-4. Play music — events log automatically
-5. Press Q to stop, session saves
+Finger states trigger melody notes. Chord voicings come from a fixed sequence library and supporting harmonic logic. Additional sensor values are mapped to MIDI CC messages for expressive control.
 
-Sessions are named: `YYYYMMDD_HHMMSS.json`
+### 4. Session capture
 
-Example event log:
-```json
-{
-  "session_id": "20260222_101530",
-  "performer_id": "guest",
-  "events": [
-    {"timestamp": 0.0, "type": "session_started", "camera_index": 1},
-    {"timestamp": 1.2, "type": "chord_change", "chord": "C Major"},
-    {"timestamp": 2.3, "type": "note_on", "note": 60, "velocity": 85},
-    {"timestamp": 2.8, "type": "hand_detected", "x": 0.5, "y": 0.3}
-  ]
-}
-```
+Each run can write structured session logs to `sessions/` so performances can be inspected later in a dashboard or forwarded to a cloud backend.
 
-## Cloud Integration (Optional)
+## Running The Project
 
-To enable Vultr cloud:
+### Prerequisites
 
-1. **Create `.env` file:**
-   ```
-   DB_HOST=your-db.vultr.com
-   DB_USER=vultradmin
-   DB_PASSWORD=your_password
-   VM_HOST=104.207.143.159
-   VM_USER=root
-   VM_PASSWORD=your_vm_password
-   ```
+- Python 3.10+
+- `conda` or an equivalent Python environment manager
+- A webcam
+- An ESP32 glove flashed with the firmware in this repo
+- A MIDI-capable synth or DAW if you want external MIDI playback
 
-2. **Run with cloud:**
-   ```bash
-   ./run.sh --vultr
-   ```
+### Local setup
 
-Benefits:
-- Sessions persist in cloud database
-- Multiple devices can share a session store
-- Real-time dashboard accessible remotely
-- Historical analytics
-
-But if Vultr is down or unreachable? **No problem** — sessions still save locally, dashboard still works.
-
-## Troubleshooting
-
-### "Conda not found"
 ```bash
-# Install Miniforge (lightweight conda)
-curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-$(uname -m).sh
-bash Miniforge3-MacOSX-*.sh
+conda create -n gesture-hand python=3.11
+conda activate gesture-hand
+pip install -r requirements.txt
 ```
 
-### "Bluetooth connection timeout"
-- Check ESP32 is powered on
-- Look for `HC-05` or `GestureHand` in system Bluetooth settings
-- Try reconnecting manually first
-- Check Arduino sketch is loaded on ESP32
+### Run locally
 
-### "Camera not found"
-- Run with `--camera-index 0` instead (1st camera)
-- Check webcam is working: open Zoom, select camera
-- Try different USB port (if USB camera)
-
-### "Dashboard shows 'No sessions'"
-- Perform a session first (run hand_tracking.py)
-- Check `sessions/` directory exists
-- Look for `*.json` files in `sessions/`
-
-## For Judges/Demos
-
-**Show the System:**
 ```bash
-./run.sh              # Local mode (always works)
-# Point to http://localhost:8888 in browser
-# Open a saved session to see the event timeline
+./run.sh --port /dev/cu.usbserial-0001
 ```
 
-**Show the Architecture:**
-- See [ARCHITECTURE.md](ARCHITECTURE.md) for how compute + database separation enables scalability
-- Vultr managed database = production-grade persistence
-- Real-time ingestion = live dashboard updates
-- Fingerprinting = proof of performance authenticity
+Useful flags:
 
-**Test Fallback Resilience:**
-- Start with `./run.sh` (local mode)
-- Create a session
-- Dashboard shows it automatically
-- This works even if cloud is down
+- `--camera-index 1` to select a different webcam
+- `--list-cameras` to probe available cameras
+- `--list-midi` to inspect MIDI outputs
+- `--no-dashboard` to skip the local dashboard
 
-## Development
+### Direct entry point
 
-**Main Entry Point:**
-[hand_tracking.py](hand_tracking.py) — Performance engine with sensor fusion
-
-**Key Classes:**
-- `FlexReader`: Bluetooth glove interface
-- `MadgwickAHRS`: IMU orientation estimation
-- `LocalSessionLogger`: Session storage
-- `SessionDashboard`: Flask web app
-
-**Testing:**
 ```bash
-# Just the glove (no camera)
-python3 bluetooth_read.py /dev/cu.HC-05-SerialPort
-
-# Just the camera (no glove)
-python3 hand_tracking.py --no-bluetooth
-
-# Cloud integration tests (requires Vultr setup)
-python3 test_db_connection.py
+python3 hand_tracking.py --port /dev/cu.usbserial-0001 --camera-index 1
 ```
 
-## Architecture Deep Dive
+## Vultr Integration
 
-Want to understand how it all fits together? See [ARCHITECTURE.md](ARCHITECTURE.md):
+The repo also contains a simple hosted backend path for session ingestion and review:
 
-- **Local-first design**: Everything works offline
-- **Optional cloud**: Vultr for scale/persistence
-- **Graceful fallback**: If cloud is down, use local
-- **Real-time ingestion**: Events fingerprinted + timestamped
-- **Horizontal scalability**: Stateless API + centralized DB
+- `vultr_backend.py` exposes API endpoints for session start, ingest, stop, and review
+- `vultr_schema.sql` defines the PostgreSQL schema
+- `deploy_vultr_vm.py` and related scripts automate deployment to a Vultr VM
 
-## Performance Targets
+This part of the project demonstrates basic full-stack ownership beyond the instrument itself: device data leaves the glove, becomes structured events, and can be persisted in a hosted system.
 
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Hand tracking latency | <100ms | 30-40ms (30fps) |
-| Bluetooth poll rate | 50Hz | 50Hz (IMU) |
-| MIDI generation | Real-time | <10ms latency |
-| Dashboard response | <200ms | <50ms (local) |
-| Session save time | <500ms | ~100ms (JSON) |
+## What A Recruiter Should Look At
 
-## Credits
+For embedded / hardware roles:
 
-Built for **MIT 6.835 (Music Technology)**
+- ESP32 firmware under `esp32/`
+- Sensor integration choices
+- Packet design and I/O handling
+- Hardware-software boundary decisions
 
-**Hardware:**
-- ESP32 microcontroller (flex + IMU + FSR)
-- Bluetooth HC-05 module
-- USB webcam
+For software roles:
 
-**Software:**
-- MediaPipe (hand landmarks)
-- OpenCV (camera I/O)
-- mido (MIDI generation)
-- Flask (dashboard)
+- `hand_tracking.py`
+- `chord_library.py`
+- `local_session_logger.py`
+- Vultr backend and deployment scripts
 
-## License
+## Current State
 
-MIT — Free to use, modify, distribute
+This is a working prototype, not a polished product. The code reflects fast iteration under hackathon constraints, but the core system is real: glove firmware, live input parsing, camera fusion, audio/MIDI control, and session logging are all implemented.
 
----
+## Forking This Repo
 
-**Questions?** Check ARCHITECTURE.md or review the comments in [hand_tracking.py](hand_tracking.py)
-- `/Users/patliu/Desktop/Coding/MakeMIT2026/vultr_backend.py`
-- `/Users/patliu/Desktop/Coding/MakeMIT2026/vultr_ingest_client.py`
-- `/Users/patliu/Desktop/Coding/MakeMIT2026/vultr_schema.sql`
-- `/Users/patliu/Desktop/Coding/MakeMIT2026/VULTR_DEMO.md`
+To create your own recruiter-facing copy:
+
+1. Fork the repository on GitHub.
+2. Clone your fork locally.
+3. Set your fork as `origin`.
+4. Keep the original project as `upstream` if you want to pull later changes.
+
+Example:
+
+```bash
+git clone https://github.com/<your-username>/MakeMIT2026.git
+cd MakeMIT2026
+git remote add upstream https://github.com/so2zhang/MakeMIT2026.git
+git remote -v
+```
+
+If you want a cleaner public fork, I recommend:
+
+- removing old demo-only notes
+- adding photos or a short architecture diagram
+- linking a short demo video
+- pinning the most relevant branch as your default branch
+
+## Contact / Context
+
+Built at MakeMIT 2026 as an exploration of wearable interfaces, embedded sensing, and real-time human-computer interaction.
