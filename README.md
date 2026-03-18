@@ -4,7 +4,7 @@
 
 Cadence is a wearable musical interface built during MakeMIT 2026. The system combines an ESP32-based sensing glove, webcam hand tracking, and a Python real-time control pipeline to turn hand motion into notes, chords, and expressive control signals.
 
-This repository is organized to be reviewable by hardware engineering and software engineering recruiters. It shows embedded sensor integration, signal conditioning, serial protocol design, real-time Python systems work, and a lightweight local/cloud data pipeline.
+The project combines embedded sensor integration, signal conditioning, serial protocol design, real-time Python systems work, and a lightweight local/cloud data pipeline.
 
 ## Demo And Build Media
 
@@ -166,50 +166,17 @@ The repo also contains a simple hosted backend path for session ingestion and re
 
 This part of the project demonstrates basic full-stack ownership beyond the instrument itself: device data leaves the glove, becomes structured events, and can be persisted in a hosted system.
 
-## What A Recruiter Should Look At
+## Key Files
 
-For embedded / hardware roles:
-
-- ESP32 firmware under `esp32/`
-- Sensor integration choices
-- Packet design and I/O handling
-- Hardware-software boundary decisions
-
-For software roles:
-
-- `hand_tracking.py`
-- `chord_library.py`
-- `local_session_logger.py`
-- Vultr backend and deployment scripts
+- `esp32/hackcode2.ino` contains the current ESP32 glove firmware
+- `hand_tracking.py` contains the main runtime for glove ingest, camera fusion, and note generation
+- `chord_library.py` contains the reusable chord sequence logic
+- `local_session_logger.py` writes structured session logs and live snapshots
+- `vultr_backend.py` contains the hosted ingestion backend
 
 ## Current State
 
 This is a working prototype, not a polished product. The code reflects fast iteration under hackathon constraints, but the core system is real: glove firmware, live input parsing, camera fusion, audio/MIDI control, and session logging are all implemented.
-
-## Forking This Repo
-
-To create your own recruiter-facing copy:
-
-1. Fork the repository on GitHub.
-2. Clone your fork locally.
-3. Set your fork as `origin`.
-4. Keep the original project as `upstream` if you want to pull later changes.
-
-Example:
-
-```bash
-git clone https://github.com/<your-username>/MakeMIT2026.git
-cd MakeMIT2026
-git remote add upstream https://github.com/so2zhang/MakeMIT2026.git
-git remote -v
-```
-
-If you want a cleaner public fork, I recommend:
-
-- removing old demo-only notes
-- adding photos or a short architecture diagram
-- linking a short demo video
-- pinning the most relevant branch as your default branch
 
 ## Contact / Context
 
