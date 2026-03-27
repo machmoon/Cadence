@@ -16,8 +16,17 @@ __pycache__/
 dist/
 build/
 
-# MediaPipe model (downloaded at runtime)
-*.task
+# JavaScript
+node_modules/
+immersive-web/node_modules/
+immersive-web/.next/
+
+# Runtime/generated data
+sessions/_current.json
+hand_landmarker.task
+.codex-video-frames/
+original-e49a03a2faee69efd5cc185d8c1cbc97.mp4
+redbull-rb19-oracle-wwwvecarzcom/
 
 # IDE
 .idea/

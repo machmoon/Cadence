@@ -1033,6 +1033,32 @@ def main():
 
             # Log telemetry data for live dashboard (every 10 frames ~= 5 per second)
             if frame_counter % 10 == 0:
+                live_pitch_deg = ahrs.pitch_deg()
+                session_logger.log_metadata(
+                    thumb=int(thumb_raw) if thumb_raw is not None else 0,
+                    hall=int(flex.get("hall", 0)),
+                    hall1=int(flex.get("hall1", 0)),
+                    hall2=int(flex.get("hall2", 0)),
+                    hall3=int(flex.get("hall3", 0)),
+                    fingers={
+                        f: round(float(smooth_v.get(f, 0.0)), 3)
+                        for f in note_pool_order
+                    },
+                    motion={
+                        "pitch_deg": round(live_pitch_deg, 2),
+                        "accel_x": round(_ax, 3),
+                        "accel_y": round(_ay, 3),
+                        "accel_z": round(_az, 3),
+                        "gyro_x": round(_gx, 3),
+                        "gyro_y": round(_gy, 3),
+                        "gyro_z": round(_gz, 3),
+                    },
+                    music={
+                        "chord": chord_name,
+                        "active_notes": len([note for note in notes_on.values() if note is not None]),
+                        "mode": "fusion" if camera_enabled else "flex-only",
+                    },
+                )
                 session_logger.log_event("imu_data", data={
                     "accel_x": round(_ax, 3),
                     "accel_y": round(_ay, 3),
