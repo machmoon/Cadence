@@ -1034,6 +1034,10 @@ def main():
             # Log telemetry data for live dashboard (every 10 frames ~= 5 per second)
             if frame_counter % 10 == 0:
                 live_pitch_deg = ahrs.pitch_deg()
+                with chord_lock:
+                    current_chord_tones = list(notes)
+                    current_chord_voicing = list(chord_notes_on)
+                active_pitches = [note for note in notes_on.values() if note is not None]
                 session_logger.log_metadata(
                     thumb=int(thumb_raw) if thumb_raw is not None else 0,
                     hall=int(flex.get("hall", 0)),
@@ -1055,7 +1059,10 @@ def main():
                     },
                     music={
                         "chord": chord_name,
-                        "active_notes": len([note for note in notes_on.values() if note is not None]),
+                        "active_notes": len(active_pitches),
+                        "active_pitches": active_pitches,
+                        "chord_tones": current_chord_tones,
+                        "chord_voicing": current_chord_voicing,
                         "mode": "fusion" if camera_enabled else "flex-only",
                     },
                 )

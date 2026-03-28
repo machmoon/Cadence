@@ -20,6 +20,7 @@ build/
 node_modules/
 immersive-web/node_modules/
 immersive-web/.next/
+test-results/
 
 # Runtime/generated data
 sessions/_current.json

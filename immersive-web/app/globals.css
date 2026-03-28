@@ -176,6 +176,7 @@ canvas {
   backdrop-filter: blur(26px);
   box-shadow: var(--panel-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   pointer-events: auto;
+  transition: opacity 320ms ease, transform 360ms ease, filter 320ms ease;
 }
 
 .intro-topbar {
@@ -413,13 +414,14 @@ canvas {
   display: grid;
   gap: 14px;
   pointer-events: auto;
-  transition: transform 280ms ease, opacity 280ms ease, width 280ms ease, background 280ms ease;
+  transition: transform 320ms ease, opacity 320ms ease, width 320ms ease, background 320ms ease, padding 320ms ease;
 }
 
 .telemetry-workbench-collapsed {
   width: auto;
   min-width: 0;
   padding: 12px;
+  transform: translateY(0);
 }
 
 .workbench-header {
@@ -476,6 +478,89 @@ canvas {
   font-size: 0.98rem;
   font-weight: 560;
   color: rgba(255, 245, 236, 0.96);
+}
+
+.console-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.console-arrow {
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(245, 240, 232, 0.64);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.console-arrow:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 233, 206, 0.14);
+}
+
+.console-page-indicator {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.console-page-indicator span {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.48);
+}
+
+.console-page-indicator strong {
+  font-size: 0.86rem;
+  color: rgba(255, 243, 232, 0.92);
+}
+
+.console-content {
+  display: grid;
+  overflow: hidden;
+  transition: max-height 320ms ease, opacity 260ms ease, transform 320ms ease;
+}
+
+.console-content-open {
+  max-height: 860px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.console-page {
+  animation: consolePageIn 280ms ease;
+}
+
+@keyframes consolePageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gesture-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(124px, 0.85fr);
+  gap: 12px;
 }
 
 .sensor-web-card,
@@ -585,6 +670,121 @@ canvas {
   gap: 6px;
 }
 
+.motion-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.motion-panel-hero {
+  display: grid;
+  gap: 8px;
+}
+
+.motion-gauge {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.motion-arc,
+.motion-axis-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1.4;
+}
+
+.motion-pointer {
+  stroke: rgba(255, 214, 180, 0.96);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.motion-node {
+  fill: rgba(255, 240, 224, 0.98);
+  filter: drop-shadow(0 0 10px rgba(255, 188, 123, 0.22));
+}
+
+.motion-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.motion-copy span,
+.motion-meter-label span,
+.music-progression-head span,
+.music-prog-chip span,
+.music-voice-pill {
+  font-family: var(--font-mono), monospace;
+}
+
+.motion-copy span {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.48);
+}
+
+.motion-copy strong {
+  font-size: 1.05rem;
+  color: rgba(255, 246, 235, 0.96);
+}
+
+.motion-copy em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: rgba(244, 236, 255, 0.56);
+}
+
+.motion-meter-group {
+  display: grid;
+  gap: 8px;
+}
+
+.motion-meter {
+  display: grid;
+  gap: 6px;
+}
+
+.motion-meter-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.motion-meter-label span {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.48);
+}
+
+.motion-meter-label strong {
+  font-size: 0.76rem;
+  color: rgba(255, 243, 232, 0.9);
+}
+
+.motion-meter-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.motion-meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 188, 123, 0.95), rgba(255, 224, 196, 0.95));
+}
+
+.motion-meter-fill-cool {
+  background: linear-gradient(90deg, rgba(130, 223, 215, 0.9), rgba(255, 224, 196, 0.85));
+}
+
 .music-telemetry-hero {
   display: grid;
   grid-template-columns: 1fr;
@@ -592,30 +792,126 @@ canvas {
   align-items: center;
 }
 
-.music-wave-graphic {
+.music-progression {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+    radial-gradient(circle at 50% 40%, rgba(255, 190, 126, 0.08), transparent 52%);
+}
+
+.music-progression-head {
+  display: flex;
+  justify-content: space-between;
+}
+
+.music-progression-head span {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.48);
+}
+
+.music-progression-lane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.music-prog-chip {
+  position: relative;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.music-prog-chip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  width: 10px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.music-prog-chip:last-child::after {
+  display: none;
+}
+
+.music-prog-chip span {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.7);
+}
+
+.music-prog-chip-current {
+  background: linear-gradient(180deg, rgba(255, 204, 162, 0.18), rgba(146, 226, 219, 0.1));
+  border-color: rgba(255, 233, 206, 0.18);
+  box-shadow: 0 0 20px rgba(255, 188, 123, 0.14);
+}
+
+.music-field {
   width: 100%;
   height: auto;
   display: block;
   overflow: visible;
-  padding: 4px 0;
+  padding: 4px 0 2px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+    radial-gradient(circle at 60% 40%, rgba(255, 190, 126, 0.07), transparent 56%);
 }
 
-.music-wave-area {
-  fill: rgba(255, 188, 123, 0.12);
+.music-field-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 4px;
+  letter-spacing: 0.08em;
+  fill: rgba(245, 240, 232, 0.44);
 }
 
-.music-wave-line {
-  fill: none;
-  stroke: rgba(255, 215, 182, 0.98);
-  stroke-width: 2.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 18px rgba(255, 188, 123, 0.2));
+.music-field-cell {
+  fill: rgba(255, 255, 255, 0.06);
 }
 
-.music-wave-node {
-  fill: rgba(170, 233, 226, 0.92);
-  filter: drop-shadow(0 0 10px rgba(122, 210, 201, 0.28));
+.music-field-cell-active {
+  fill: rgba(255, 211, 176, 0.34);
+}
+
+.music-field-cell-current {
+  fill: rgba(255, 244, 231, 0.96);
+  stroke: rgba(130, 223, 215, 0.75);
+  stroke-width: 0.4;
+}
+
+.music-voice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.music-voice-pill {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.54);
+}
+
+.music-voice-pill-active {
+  background: linear-gradient(180deg, rgba(255, 204, 162, 0.18), rgba(146, 226, 219, 0.08));
+  border-color: rgba(255, 233, 206, 0.18);
+  color: rgba(255, 244, 230, 0.92);
 }
 
 .music-hero-copy {
@@ -739,7 +1035,8 @@ canvas {
   }
 
   .sensor-web-hero,
-  .music-telemetry-hero {
+  .music-telemetry-hero,
+  .gesture-grid {
     grid-template-columns: 1fr;
   }
 

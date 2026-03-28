@@ -6,6 +6,11 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8787";
 const StageScene = lazy(() => import("./StageScene"));
+const CONSOLE_PAGES = [
+  { id: "fingers", label: "Fingers" },
+  { id: "motion", label: "Motion" },
+  { id: "harmony", label: "Harmony" }
+];
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -37,6 +42,31 @@ function formatHarmonyLabel(chord) {
     .trim();
 
   return suffix ? `${mapped} ${suffix}` : mapped;
+}
+
+function noteName(midi) {
+  if (!Number.isFinite(midi)) return "";
+  const names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+  return names[((midi % 12) + 12) % 12];
+}
+
+const PITCH_CLASS_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+
+function motionProfile(motion = {}) {
+  const pitch = Number(motion.pitch_deg || 0);
+  const rotation = Math.abs(Number(motion.gyro_z || 0));
+  const acceleration = Math.sqrt(
+    Math.pow(Number(motion.accel_x || 0), 2) +
+    Math.pow(Number(motion.accel_y || 0), 2) +
+    Math.pow(Number(motion.accel_z || 0), 2)
+  );
+
+  return {
+    pitch,
+    tiltPercent: clamp((Math.abs(pitch) / 28) * 100, 0, 100),
+    rotationPercent: clamp((rotation / 120) * 100, 0, 100),
+    energyPercent: clamp((acceleration / 3.2) * 100, 0, 100)
+  };
 }
 
 function formatDuration(startedAt) {
@@ -180,6 +210,26 @@ function usePointer() {
   }, []);
 
   return pointer;
+}
+
+function useMusicHistory(telemetry) {
+  const [history, setHistory] = useState([]);
+  const pitchSignature = JSON.stringify(telemetry.music?.activePitches || []);
+
+  useEffect(() => {
+    const now = Date.now();
+    const music = telemetry.music || {};
+    const nextEntry = {
+      t: now,
+      chord: music.chord || "",
+      activeNotes: Number(music.activeNotes || 0),
+      activePitches: [...(music.activePitches || [])].map((note) => Number(note)).filter(Number.isFinite)
+    };
+
+    setHistory((prev) => [...prev, nextEntry].filter((entry) => now - entry.t <= 10000));
+  }, [telemetry.music?.chord, telemetry.music?.activeNotes, pitchSignature]);
+
+  return history;
 }
 
 function IntroStack() {
@@ -329,78 +379,199 @@ function SensorWebGraph({ fingers, halls, thumbValue, summary }) {
   );
 }
 
-function MusicTelemetryCard({ music, summary }) {
-  const harmonyLabel = formatHarmonyLabel(music.chord);
-  const points = Array.from({ length: 18 }, (_, index) => {
-    const active = music.activeNotes || 0;
-    const chordWeight = (music.chord || "").length % 7;
-    const x = (index / 17) * 100;
-    const waveA = Math.sin(index * 0.42 + active * 0.5) * 10;
-    const waveB = Math.cos(index * 0.26 + chordWeight * 0.7) * 6;
-    const y = 32 - waveA - waveB;
-    return [x, y];
-  });
-  const linePath = points.map(([x, y], index) => `${index === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
-  const areaPath = `${linePath} L 100 64 L 0 64 Z`;
+function MotionPanel({ motion }) {
+  const profile = motionProfile(motion);
+  const tiltAngle = clamp(profile.pitch, -28, 28);
+  const pointerX = 50 + (tiltAngle / 28) * 28;
 
   return (
-    <div className="music-telemetry-card">
-      <div className="music-telemetry-hero">
-        <svg viewBox="0 0 100 64" className="music-wave-graphic" aria-hidden="true">
-          <path d={areaPath} className="music-wave-area" />
-          <path d={linePath} className="music-wave-line" />
-          {points.slice(2, 16).filter((_, index) => index % 4 === 0).map(([x, y], index) => (
-            <circle key={index} cx={x} cy={y} r="1.6" className="music-wave-node" />
-          ))}
+    <div className="motion-panel">
+      <div className="motion-panel-hero">
+        <svg viewBox="0 0 100 64" className="motion-gauge" aria-label="orientation and movement">
+          <path d="M 18 44 A 32 32 0 0 1 82 44" className="motion-arc" />
+          <line x1="50" y1="12" x2={pointerX} y2="44" className="motion-pointer" />
+          <circle cx={pointerX} cy="44" r="3.5" className="motion-node" />
+          <line x1="50" y1="14" x2="50" y2="48" className="motion-axis-line" />
         </svg>
-        <div className="music-hero-copy">
-          <span>music</span>
-          <strong>{harmonyLabel}</strong>
-          <em>{music.mode || "fusion"}</em>
+        <div className="motion-copy">
+          <span>tilt</span>
+          <strong>{tiltAngle >= 0 ? "+" : ""}{tiltAngle.toFixed(0)} deg</strong>
+          <em>orientation from imu fusion</em>
         </div>
       </div>
 
-      <div className="panel-meta">
-        <span>{music.activeNotes || 0} active</span>
+      <div className="motion-meter-group">
+        <div className="motion-meter">
+          <div className="motion-meter-label">
+            <span>rotation</span>
+            <strong>{Math.round(profile.rotationPercent)}%</strong>
+          </div>
+          <div className="motion-meter-track">
+            <div className="motion-meter-fill motion-meter-fill-cool" style={{ width: `${profile.rotationPercent}%` }} />
+          </div>
+        </div>
+        <div className="motion-meter">
+          <div className="motion-meter-label">
+            <span>energy</span>
+            <strong>{Math.round(profile.energyPercent)}%</strong>
+          </div>
+          <div className="motion-meter-track">
+            <div className="motion-meter-fill" style={{ width: `${profile.energyPercent}%` }} />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function PerformancePanels({ telemetry }) {
+function MusicTelemetryCard({ music, history }) {
+  const harmonyLabel = formatHarmonyLabel(music.chord);
+  const activePitches = [...(music.activePitches || [])].sort((a, b) => a - b);
+  const activeVoices = Math.max(0, activePitches.length);
+  const progression = history
+    .map((entry) => entry.chord)
+    .filter(Boolean)
+    .reduce((acc, chord) => {
+      if (acc[acc.length - 1] !== chord) acc.push(chord);
+      return acc;
+    }, [])
+    .slice(-5);
+  const progressionLabels = progression.length ? progression.map(formatHarmonyLabel) : [harmonyLabel];
+  const noteLabels = activePitches.length ? activePitches.map(noteName) : [];
+  const bucketCount = 12;
+  const samples = (history.length ? history : [{ t: Date.now(), activePitches }]).slice(-80);
+  const firstTime = samples[0]?.t || Date.now();
+  const lastTime = samples[samples.length - 1]?.t || firstTime + 1;
+  const timeRange = Math.max(1000, lastTime - firstTime);
+  const fieldBuckets = Array.from({ length: bucketCount }, () => new Set());
+
+  samples.forEach((entry) => {
+    const ratio = (entry.t - firstTime) / timeRange;
+    const bucketIndex = Math.max(0, Math.min(bucketCount - 1, Math.floor(ratio * bucketCount)));
+    (entry.activePitches || []).forEach((pitch) => fieldBuckets[bucketIndex].add(((pitch % 12) + 12) % 12));
+  });
+
+  const currentPitchClasses = new Set(activePitches.map((pitch) => ((pitch % 12) + 12) % 12));
+
+  return (
+    <div className="music-telemetry-card">
+      <div className="music-telemetry-hero">
+        <div className="music-progression" aria-label="recent chord progression">
+          <div className="music-progression-head">
+            <span>markov progression</span>
+            <span>current</span>
+          </div>
+          <div className="music-progression-lane">
+            {progressionLabels.map((label, index) => {
+              const isCurrent = index === progressionLabels.length - 1;
+              return (
+                <div key={`${label}-${index}`} className={`music-prog-chip ${isCurrent ? "music-prog-chip-current" : ""}`}>
+                  <span>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <svg viewBox="0 0 120 84" className="music-field" aria-label="recent harmonic field">
+          {PITCH_CLASS_NAMES.map((label, row) => (
+            <text key={label} x="3" y={10 + row * 5.6} className="music-field-label">
+              {label}
+            </text>
+          ))}
+          {fieldBuckets.map((bucket, column) =>
+            PITCH_CLASS_NAMES.map((_, row) => {
+              const pitchClass = row;
+              const active = bucket.has(pitchClass);
+              const current = column === bucketCount - 1 && currentPitchClasses.has(pitchClass);
+              const x = 18 + column * 6.8 + row * 0.85;
+              const y = 6 + row * 5.6 - column * 0.42;
+
+              return (
+                <rect
+                  key={`${column}-${pitchClass}`}
+                  x={x}
+                  y={y}
+                  width="5.2"
+                  height="3.4"
+                  rx="1.2"
+                  className={`music-field-cell ${active ? "music-field-cell-active" : ""} ${current ? "music-field-cell-current" : ""}`}
+                />
+              );
+            })
+          )}
+        </svg>
+        <div className="music-hero-copy">
+          <span>current chord</span>
+          <strong>{harmonyLabel}</strong>
+          <em>{noteLabels.length ? noteLabels.join("  ") : "markov progression engine"}</em>
+        </div>
+      </div>
+
+      <div className="music-voice-row" aria-label="active voices">
+        {Array.from({ length: Math.max(4, activeVoices || 4) }, (_, index) => (
+          <span key={index} className={`music-voice-pill ${index < activeVoices ? "music-voice-pill-active" : ""}`}>
+            {noteLabels[index] || "rest"}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PerformancePanels({ telemetry, consolePage }) {
   const summary = buildSignalSummary(telemetry);
   const halls = telemetry.halls || {};
   const fingers = telemetry.fingers || {};
   const motion = telemetry.motion || telemetry.latest || {};
   const thumbValue = clamp((telemetry.thumb || 0) / 4095, 0, 1);
   const music = telemetry.music || { chord: "Imaj7", activeNotes: 0, mode: "idle" };
+  const musicHistory = useMusicHistory(telemetry);
+  const harmonyLabel = formatHarmonyLabel(music.chord);
 
   return (
     <section className="panel-deck">
-      <section className="panel-section">
-        <div className="panel-section-header">
-          <div>
-            <span>gesture</span>
-            <strong>fingers + imu</strong>
+      {consolePage === "fingers" ? (
+        <section className="panel-section">
+          <div className="panel-section-header">
+            <div>
+              <span>gesture</span>
+              <strong>finger shape</strong>
+            </div>
           </div>
-        </div>
-        <SensorWebGraph fingers={fingers} halls={halls} thumbValue={thumbValue} summary={summary} />
-      </section>
-      <section className="panel-section">
-        <div className="panel-section-header">
-          <div>
-            <span>music</span>
-            <strong>live chord</strong>
+          <SensorWebGraph fingers={fingers} halls={halls} thumbValue={thumbValue} summary={summary} />
+        </section>
+      ) : null}
+      {consolePage === "motion" ? (
+        <section className="panel-section">
+          <div className="panel-section-header">
+            <div>
+              <span>motion</span>
+              <strong>tilt and energy</strong>
+            </div>
           </div>
-        </div>
-        <MusicTelemetryCard music={music} summary={summary} />
-      </section>
+          <MotionPanel motion={motion} />
+        </section>
+      ) : null}
+      {consolePage === "harmony" ? (
+        <section className="panel-section">
+          <div className="panel-section-header">
+            <div>
+              <span>Harmony</span>
+              <strong>{harmonyLabel}</strong>
+            </div>
+          </div>
+          <MusicTelemetryCard music={music} history={musicHistory} />
+        </section>
+      ) : (
+        null
+      )}
     </section>
   );
 }
 
-function TelemetryOverlay({ telemetry, panelsOpen, focusMode, onTogglePanels, onToggleFocus }) {
+function TelemetryOverlay({ telemetry, panelsOpen, focusMode, consolePage, onTogglePanels, onToggleFocus, onStepPage }) {
   const summary = buildSignalSummary(telemetry);
+  const currentPage = CONSOLE_PAGES.find((page) => page.id === consolePage) || CONSOLE_PAGES[0];
 
   return (
     <section className={`telemetry-workbench ${panelsOpen ? "" : "telemetry-workbench-collapsed"}`}>
@@ -416,7 +587,27 @@ function TelemetryOverlay({ telemetry, panelsOpen, focusMode, onTogglePanels, on
           onToggleFocus={onToggleFocus}
         />
       </div>
-      {panelsOpen ? <PerformancePanels telemetry={telemetry} /> : null}
+      {panelsOpen ? (
+        <>
+          <div className="console-switch" aria-label="console page controls">
+            <button className="console-arrow" type="button" onClick={() => onStepPage(-1)} aria-label="Previous console page">
+              ←
+            </button>
+            <div className="console-page-indicator">
+              <span>view</span>
+              <strong>{currentPage.label}</strong>
+            </div>
+            <button className="console-arrow" type="button" onClick={() => onStepPage(1)} aria-label="Next console page">
+              →
+            </button>
+          </div>
+          <div className={`console-content ${panelsOpen ? "console-content-open" : ""}`}>
+            <div key={consolePage} className="console-page">
+              <PerformancePanels telemetry={telemetry} consolePage={consolePage} />
+            </div>
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }
@@ -427,6 +618,15 @@ export default function ImmersiveApp() {
   const [started, setStarted] = useState(false);
   const [panelsOpen, setPanelsOpen] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
+  const [consolePage, setConsolePage] = useState("fingers");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("autostart") === "1") {
+      setStarted(true);
+    }
+  }, []);
 
   const shellStyle = {
     "--tx": `${pointer.tx}px`,
@@ -450,8 +650,16 @@ export default function ImmersiveApp() {
               telemetry={telemetry}
               panelsOpen={panelsOpen}
               focusMode={focusMode}
+              consolePage={consolePage}
               onTogglePanels={() => setPanelsOpen((value) => !value)}
               onToggleFocus={() => setFocusMode((value) => !value)}
+              onStepPage={(direction) =>
+                setConsolePage((current) => {
+                  const index = CONSOLE_PAGES.findIndex((page) => page.id === current);
+                  const nextIndex = (index + direction + CONSOLE_PAGES.length) % CONSOLE_PAGES.length;
+                  return CONSOLE_PAGES[nextIndex].id;
+                })
+              }
             />
           </div>
         ) : null}

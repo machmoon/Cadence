@@ -94,6 +94,9 @@ function normalizeSession(session) {
   const music = {
     chord: session.metadata?.music?.chord || "Imaj7",
     activeNotes: Number(session.metadata?.music?.active_notes || 0),
+    activePitches: (session.metadata?.music?.active_pitches || []).map((note) => Number(note)).filter(Number.isFinite),
+    chordTones: (session.metadata?.music?.chord_tones || []).map((note) => Number(note)).filter(Number.isFinite),
+    chordVoicing: (session.metadata?.music?.chord_voicing || []).map((note) => Number(note)).filter(Number.isFinite),
     mode: session.metadata?.music?.mode || "fusion"
   };
 
@@ -126,7 +129,7 @@ function createEmptySession() {
     halls: { hall1: 0, hall2: 0, hall3: 0 },
     fingers: { pointer: 0, middle: 0, ring: 0, pinky: 0 },
     motion: { pitch_deg: 0, accel_x: 0, accel_y: 0, accel_z: 0, gyro_x: 0, gyro_y: 0, gyro_z: 0 },
-    music: { chord: "Imaj7", activeNotes: 0, mode: "idle" },
+    music: { chord: "Imaj7", activeNotes: 0, activePitches: [], chordTones: [], chordVoicing: [], mode: "idle" },
     latest: { accel_x: 0, accel_y: 0, accel_z: 0, gyro_x: 0, gyro_y: 0, gyro_z: 0 },
     history: [],
     startedAt: null,
@@ -212,6 +215,13 @@ function pushDummySample() {
     music: {
       chord: ["Imaj7", "vi7", "IVmaj7", "V7"][Math.floor(dummyState.tick / 24) % 4],
       activeNotes: 1 + (dummyState.tick % 4),
+      activePitches: [
+        60 + (Math.floor(dummyState.tick / 12) % 5),
+        64 + (dummyState.tick % 3),
+        67 + (dummyState.tick % 2)
+      ].slice(0, 1 + (dummyState.tick % 4)),
+      chordTones: [60, 64, 67, 71].map((note) => note + ((Math.floor(dummyState.tick / 24) % 4) * 2)),
+      chordVoicing: [48, 52, 55, 59].map((note) => note + ((Math.floor(dummyState.tick / 24) % 4) * 2)),
       mode: "fusion"
     },
     latest: sample,
