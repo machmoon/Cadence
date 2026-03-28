@@ -13,11 +13,9 @@ At a systems level, Cadence is an end-to-end telemetry pipeline:
 
 ## Software Preview
 
-![Cadence immersive web companion](assets/experience-screenshot.png)
+[Software walkthrough / screen recording](assets/software-walkthrough.mp4)
 
 The web companion is designed as a live performance surface, not just a debug dashboard. It includes a 3D scene, a focused live console for gesture, motion, and harmony, and a harmony view driven by the runtime's live note and chord state.
-
-See also: [software walkthrough / screen recording](assets/software-walkthrough.mp4)
 
 ## What The Glove Captures
 
