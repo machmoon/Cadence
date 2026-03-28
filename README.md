@@ -13,7 +13,7 @@ At a systems level, Cadence is an end-to-end telemetry pipeline:
 
 ## Software Preview
 
-[Software walkthrough / screen recording](assets/software-walkthrough.mp4)
+[Software walkthrough / screen recording](assets/cadence-software-preview.mp4)
 
 The web companion is designed as a live performance surface, not just a debug dashboard. It includes a 3D scene, a focused live console for gesture, motion, and harmony, and a harmony view driven by the runtime's live note and chord state.
 
@@ -50,7 +50,7 @@ The web companion:
 ## Demo Media
 
 - [Demo video with audio](assets/demo.mp4)
-- [Software walkthrough / screen recording](assets/software-walkthrough.mp4)
+- [Software walkthrough / screen recording](assets/cadence-software-preview.mp4)
 - [Build-process clip](assets/build-process.mov)
 - [Additional build photo](assets/build-photo.jpeg)
 
